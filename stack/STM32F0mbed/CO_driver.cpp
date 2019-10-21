@@ -93,11 +93,13 @@ void fromCANMessage(CANMessage *msg, CO_CANrxMsg_t *CO_msg) {
 
 static void printCANMessage(mbed::CANMessage& msg, CANCmdDirection isTx)
 {
+#if MBED_TRACE_CANOPEN
     printf("%s:\t%X\t[%d]  ", (isTx == TX ? "TX" : "RX"), msg.id, msg.len);
     for(int i=0; i<msg.len; i++) {
         printf("%02X ", msg.data[i]);
     }
     printf("\n");
+#endif // MBED_TRACE_CANOPEN   
 }
 
 

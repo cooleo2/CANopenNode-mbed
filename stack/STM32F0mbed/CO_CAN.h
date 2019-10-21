@@ -52,6 +52,8 @@
 #define MBED_CAN_RX		PB_8
 #define MBED_CAN_TX		PB_9
 
+#define MBED_TRACE_CANOPEN  0
+
 extern CANbus *CANport;
 
 #endif // CO_CAN_H
