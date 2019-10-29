@@ -1,5 +1,11 @@
 #include "CANbus.h"
+#if defined(TARGET_STM32F0)
 #include "stm32f0xx_hal_can.h"
+#elif defined(TARGET_STM32L4)
+#include "stm32l4xx_hal_can_legacy.h" //note: use legacy HAL for this chip-family in mbed-os
+#else
+#error "CANOpenNode target unsupported! \n"
+#endif
 
 CANbus::CANbus(PinName rd, PinName td) :
     mbed::CAN(rd, td)

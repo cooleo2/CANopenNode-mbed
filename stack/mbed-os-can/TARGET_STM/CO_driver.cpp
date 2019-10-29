@@ -49,11 +49,9 @@
 extern "C" {
 #include "CO_driver.h"
 #include "CO_Emergency.h"
-
-#include "CO_CAN.h"
 }
 
-CANbus CANport0(MBED_CAN_RX, MBED_CAN_TX); //local cpp variable
+static CANbus CANport0(MBED_CONF_CANOPENNODE_CAN_RD, MBED_CONF_CANOPENNODE_CAN_TD); //local cpp variable
 CANbus *CANport = NULL; //external pointer to CANPort0
 CO_CANmodule_t* _CANmodule = NULL;
 
@@ -93,13 +91,13 @@ void fromCANMessage(CANMessage *msg, CO_CANrxMsg_t *CO_msg) {
 
 static void printCANMessage(mbed::CANMessage& msg, CANCmdDirection isTx)
 {
-#if MBED_TRACE_CANOPEN
+#if MBED_CONF_CANOPENNODE_TRACE
     printf("%s:\t%X\t[%d]  ", (isTx == TX ? "TX" : "RX"), msg.id, msg.len);
     for(int i=0; i<msg.len; i++) {
         printf("%02X ", msg.data[i]);
     }
     printf("\n");
-#endif // MBED_TRACE_CANOPEN   
+#endif // MBED_CONF_CANOPENNODE_TRACE   
 }
 
 

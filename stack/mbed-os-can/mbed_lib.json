@@ -1,0 +1,21 @@
+{
+    "name": "canopennode",
+    "config": {
+        "CAN_RD": "NC",
+        "CAN_TD": "NC",
+        "trace": {
+            "help": "Trace RX and TX messages",
+            "value": "0"
+        }
+    },
+    "target_overrides": {
+        "NUCLEO_F091RC": {
+            "CAN_RD": "PB_8",
+            "CAN_TD": "PB_9"
+        },
+        "NUCLEO_L496ZG": {
+            "CAN_RD": "PB_8",
+            "CAN_TD": "PB_9"
+        }
+    }
+}
