@@ -3,6 +3,8 @@
     "config": {
         "CAN_RD": "NC",
         "CAN_TD": "NC",
+        "RUN_LED": "NC",
+        "ERROR_LED": "NC",
         "trace": {
             "help": "Trace RX and TX messages",
             "value": "0"
@@ -15,7 +17,9 @@
         },
         "NUCLEO_L496ZG": {
             "CAN_RD": "PB_8",
-            "CAN_TD": "PB_9"
+            "CAN_TD": "PB_9",
+            "RUN_LED": "LED1",
+            "ERROR_LED": "LED3"
         }
     }
 }
