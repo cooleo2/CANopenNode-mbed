@@ -13,7 +13,8 @@
     "target_overrides": {
         "NUCLEO_F091RC": {
             "CAN_RD": "PB_8",
-            "CAN_TD": "PB_9"
+            "CAN_TD": "PB_9",
+            "RUN_LED": "LED1"
         },
         "NUCLEO_L496ZG": {
             "CAN_RD": "PB_8",
