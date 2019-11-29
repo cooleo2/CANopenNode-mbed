@@ -9,12 +9,14 @@ static DigitalOut errorLed(MBED_CONF_CANOPENNODE_ERROR_LED, 0);
 
 void setRunLed(CO_LedState_t state)
 {
-    runLed.write(state);
+    if ( runLed.is_connected()) // => if pin is not NC
+        runLed.write(state);
 }
 
 void setErrorLed(CO_LedState_t state)
 {
-    errorLed.write(state);
+    if ( errorLed.is_connected()) // => if pin is not NC
+        errorLed.write(state);
 }
 
 void resetLeds()
