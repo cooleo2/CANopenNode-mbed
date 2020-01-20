@@ -55,14 +55,19 @@
 #include <stdint.h>         /* for 'int8_t' to 'uint64_t' */
 #include <stdbool.h>        /* for 'true', 'false' */
 
+void co_lock_emcy();
+void co_unlock_emcy();
+void co_lock_od();
+void co_unlock_od();
 
 /* Critical sections: empty implementations => no locking provided */
-#define CO_LOCK_CAN_SEND()
-#define CO_UNLOCK_CAN_SEND()
-#define CO_LOCK_EMCY()
-#define CO_UNLOCK_EMCY()
-#define CO_LOCK_OD()
-#define CO_UNLOCK_OD()
+#define CO_LOCK_CAN_SEND()          //locked inside mbed-os can->write()
+#define CO_UNLOCK_CAN_SEND()        //locked inside mbed-os can->write()
+#define CO_LOCK_EMCY()              co_lock_emcy();
+#define CO_UNLOCK_EMCY()            co_unlock_emcy();
+#define CO_LOCK_OD()                co_lock_od();
+#define CO_UNLOCK_OD()              co_unlock_od();
+
 
 /** @name Syncronisation functions
  * syncronisation for message buffer for communication between CAN receive and

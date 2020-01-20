@@ -3,6 +3,16 @@
 #include "stm32f0xx_hal_can.h"
 #elif defined(TARGET_STM32L4)
 #include "stm32l4xx_hal_can_legacy.h" //note: use legacy HAL for this chip-family in mbed-os
+/**
+ * From DS11585
+ * ------------
+ * The two CANs are compliant with the 2.0A and B (active) specifications with 
+ * a bit rate up to 1Mbit/s. They can receive and transmit standard frames with 
+ * 11-bit identifiers as well as extended frames with 29-bit identifiers. 
+ * Each CAN has three transmit mailboxes, two receive FIFOS with 3 stages and 
+ * 28 shared scalable filter banks (all of them can be used even if one CAN 
+ * is used). 256 bytes of SRAM are allocated for each CAN.
+*/
 #else
 #error "CANOpenNode target unsupported! \n"
 #endif
@@ -36,6 +46,7 @@ int CANbus::read_Nonblocking(mbed::CANMessage &msg, int handle)
 {
     return can_read(&_can, &msg, handle);
 }
+
 
 int CANbus::write_Nonblocking(mbed::CANMessage &msg)
 {

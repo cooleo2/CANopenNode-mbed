@@ -45,6 +45,7 @@
 
 #include "mbed.h"
 #include "CANbus.h"
+#include "platform/PlatformMutex.h"
 
 extern "C" {
 #include "CO_driver.h"
@@ -55,12 +56,15 @@ static CANbus CANport0(MBED_CONF_CANOPENNODE_CAN_RD, MBED_CONF_CANOPENNODE_CAN_T
 CANbus *CANport = NULL; //external pointer to CANPort0
 CO_CANmodule_t* _CANmodule = NULL;
 
+PlatformMutex co_emcy_mutux;
+PlatformMutex co_od_mutux;
+
 EventQueue* printfQueue = NULL;    // event queue for async printf of received frames
 
-
 enum CANCmdDirection {
-    TX = 0,
-    RX = 1
+    TX = 0,     // TX
+    RX = 1,     // RX
+    TXIRQ = 2     // TX interrupt routine
 };
 typedef enum CANCmdDirection CANCmdDirection;
 
@@ -89,14 +93,52 @@ void fromCANMessage(CANMessage *msg, CO_CANrxMsg_t *CO_msg) {
 }
 
 
-static void printCANMessage(mbed::CANMessage& msg, CANCmdDirection isTx)
+void co_lock_emcy()
+{
+    co_emcy_mutux.lock();
+}
+
+
+void co_unlock_emcy()
+{
+    co_emcy_mutux.unlock();
+}
+
+
+void co_lock_od()
+{
+    co_od_mutux.lock();
+}
+
+
+void co_unlock_od()
+{
+    co_od_mutux.unlock();
+}
+
+
+static void printCANMessage(mbed::CANMessage& msg, CANCmdDirection dir)
 {
 #if MBED_CONF_CANOPENNODE_TRACE
-    printf("%s:\t%X\t[%d]  ", (isTx == TX ? "TX" : "RX"), msg.id, msg.len);
+    printf("%s:\t%X\t[%d]  ", (dir == TX ? "TX" : (dir == RX ? "RX" : "TXIRQ")), msg.id, msg.len);
     for(int i=0; i<msg.len; i++) {
         printf("%02X ", msg.data[i]);
     }
-    printf("\n");
+    printf("\r\n");
+#endif // MBED_CONF_CANOPENNODE_TRACE   
+}
+
+static void printCANFailed(const char* errMsg, uint32_t bufferIdent)
+{
+#if MBED_CONF_CANOPENNODE_TRACE
+    printf("TX: failed, %s [OD-ID=%lu]\r\n", errMsg, bufferIdent);
+#endif // MBED_CONF_CANOPENNODE_TRACE   
+}
+
+static void printStrConst(const char* msg)
+{
+#if MBED_CONF_CANOPENNODE_TRACE
+    printf("%s\r\n", msg);
 #endif // MBED_CONF_CANOPENNODE_TRACE   
 }
 
@@ -300,25 +342,31 @@ CO_ReturnError_t CO_CANsend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer){
             CO_errorReport((CO_EM_t*)CANmodule->em, CO_EM_CAN_TX_OVERFLOW, CO_EMC_CAN_OVERRUN, buffer->ident);
         }
         err = CO_ERROR_TX_OVERFLOW;
-        printf("TX: failed (buff_full overflow)\r\n");
+        printfQueue->call(printCANFailed, "bufferFull overflow", buffer->ident);
+        //printf("TX: failed, bufferFull overflow [OD-ID=%lu]\r\n", buffer->ident);
     }
 
-    // if CAN TX buffer is free, copy message to it
+    CO_LOCK_CAN_SEND();
+    // if CAN TX buffer is free of given OD, copy message to it
     int success = -1;
     if (CANmodule->CANtxCount == 0) {
+        //printfQueue->call(printStrConst, "CO_CANsend: tryTX");
         CANMessage msg = toCANMessage(buffer);
         success = CANport->write(msg);
-        printfQueue->call(printCANMessage, msg, TX);
         if (success == 1) {
-            printCANMessage(msg, TX);
             CANmodule->bufferInhibitFlag = buffer->syncFlag;
+            printfQueue->call(printCANMessage, msg, TX);
+        } else {
+            buffer->bufferFull = true;
+            CANmodule->CANtxCount++;
+            printfQueue->call(printCANFailed, "canFull", buffer->ident);
         }
-    }
-    if (success != 1) {
-        printf("TX: failed (buff_full)\r\n");
+    } else {
         buffer->bufferFull = true;
         CANmodule->CANtxCount++;
+        printfQueue->call(printCANFailed, "bufferFull", buffer->ident);
     }
+    CO_UNLOCK_CAN_SEND();
 
     return err;
 }
@@ -328,6 +376,7 @@ CO_ReturnError_t CO_CANsend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer){
 void CO_CANclearPendingSyncPDOs(CO_CANmodule_t *CANmodule){
     uint32_t tpdoDeleted = 0U;
 
+    CO_LOCK_CAN_SEND();
     // Abort message from CAN module, if there is synchronous TPDO.
     if(CANmodule->bufferInhibitFlag) {
         // clear transmit mailboxes 
@@ -335,16 +384,7 @@ void CO_CANclearPendingSyncPDOs(CO_CANmodule_t *CANmodule){
         CANmodule->bufferInhibitFlag = false;
         tpdoDeleted = 1U;
     }
-    // Take special care with this functionality. 
-    /*if (((MBED_CAN_REG->GSR & (1 << 2)) == 0) && CANmodule->bufferInhibitFlag){
-        // clear TXREQ 
-        MBED_CAN_REG->CMR = (1 << 5) | (1 << 1); // Select TX buffer 1 and run AT command (abort)
-        MBED_CAN_REG->CMR = (1 << 6) | (1 << 1); // Select TX buffer 2 and run AT command (abort)
-        MBED_CAN_REG->CMR = (1 << 7) | (1 << 1); // Select TX buffer 3 and run AT command (abort)
 
-        CANmodule->bufferInhibitFlag = false;
-        tpdoDeleted = 1U;
-    }*/
     // delete also pending synchronous TPDOs in TX buffers 
     if(CANmodule->CANtxCount != 0U){
         uint16_t i;
@@ -360,7 +400,7 @@ void CO_CANclearPendingSyncPDOs(CO_CANmodule_t *CANmodule){
             buffer++;
         }
     }
-    //CO_UNLOCK_CAN_SEND();
+    CO_UNLOCK_CAN_SEND();
 
 
     if(tpdoDeleted != 0U){
@@ -479,27 +519,28 @@ void CO_CANinterrupt_RX(CO_CANmodule_t *CANmodule){
         buffer->pFunct(buffer->object, rcvMsg);
     }
 
-    // Clear interrupt flag 
-    // The interrupt flag is cleaned by CANport.read() function call 
+    // Clear interrupt flag here
+    // note: the interrupt flag is cleaned by CANport.read() function call 
     printfQueue->call(printCANMessage, msg, RX);
 }
 
 
 void CO_CANinterrupt_TX(CO_CANmodule_t *CANmodule){
-    // Clear interrupt flag 
+    // Clear interrupt flag here
+    // note: interrupt flag is clear by mbed-os HAL
+    //printfQueue->call(printStrConst, "*");
 
     // First CAN message (bootup) was sent successfully 
     CANmodule->firstCANtxMessage = false;
     // clear flag from previous message 
     CANmodule->bufferInhibitFlag = false;
-    // Are there any new messages waiting to be send 
-    if(CANmodule->CANtxCount > 0U){
+    // Are there any new messages waiting to be send?
+    if(CANmodule->CANtxCount > 0){
         uint16_t i;             // index of transmitting message 
-
-        // first buffer 
-        CO_CANtx_t *buffer = &CANmodule->txArray[0];
+        CO_CANtx_t *buffer = &CANmodule->txArray[0];  // first buffer 
         // search through whole array of pointers to transmit message buffers. 
-        for(i = CANmodule->txSize; i > 0U; i--){
+        for(i = CANmodule->txSize; i > 0; i--){
+            //printfQueue->call(printStrConst, "#");
             // if message buffer is full, send it. 
             if(buffer->bufferFull){
                 buffer->bufferFull = false;
@@ -509,16 +550,18 @@ void CO_CANinterrupt_TX(CO_CANmodule_t *CANmodule){
                 CANmodule->bufferInhibitFlag = buffer->syncFlag;
                 // canSend... 
                 CANMessage msg = toCANMessage(buffer);
-                CANport->write_Nonblocking(msg);
-                printfQueue->call(printCANMessage, msg, TX);
+                int success = CANport->write_Nonblocking(msg);
+                if (success == 1) { 
+                    printfQueue->call(printCANMessage, msg, TX);
+                }
                 break;                      // exit for loop 
             }
             buffer++;
         }// end of for loop 
 
         // Clear counter if no more messages 
-        if(i == 0U){
-            CANmodule->CANtxCount = 0U;
+        if(i == 0){
+            CANmodule->CANtxCount = 0;
         }
     }
 }
