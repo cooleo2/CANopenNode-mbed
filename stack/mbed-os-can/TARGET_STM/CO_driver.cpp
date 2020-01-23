@@ -59,7 +59,9 @@ CO_CANmodule_t* _CANmodule = NULL;
 PlatformMutex co_emcy_mutux;
 PlatformMutex co_od_mutux;
 
+#if MBED_CONF_CANOPENNODE_TRACE
 EventQueue* printfQueue = NULL;    // event queue for async printf of received frames
+#endif
 
 enum CANCmdDirection {
     TX = 0,     // TX
@@ -117,30 +119,58 @@ void co_unlock_od()
 }
 
 
+#if MBED_CONF_CANOPENNODE_TRACE
 static void printCANMessage(mbed::CANMessage& msg, CANCmdDirection dir)
 {
-#if MBED_CONF_CANOPENNODE_TRACE
     printf("%s:\t%X\t[%d]  ", (dir == TX ? "TX" : (dir == RX ? "RX" : "TXIRQ")), msg.id, msg.len);
     for(int i=0; i<msg.len; i++) {
         printf("%02X ", msg.data[i]);
     }
     printf("\r\n");
-#endif // MBED_CONF_CANOPENNODE_TRACE   
+ 
 }
+static void enqueuePrintCANMessage(mbed::CANMessage& msg, CANCmdDirection dir)
+{
+    printfQueue->call(printCANMessage, msg, dir);
+} 
 
 static void printCANFailed(const char* errMsg, uint32_t bufferIdent)
 {
-#if MBED_CONF_CANOPENNODE_TRACE
     printf("TX: failed, %s [OD-ID=%lu]\r\n", errMsg, bufferIdent);
-#endif // MBED_CONF_CANOPENNODE_TRACE   
 }
+static void enqueuePrintCANFailed(const char* errMsg, uint32_t bufferIdent)
+{
+    printfQueue->call(printCANFailed, errMsg, bufferIdent);
+} 
 
 static void printStrConst(const char* msg)
 {
-#if MBED_CONF_CANOPENNODE_TRACE
     printf("%s\r\n", msg);
-#endif // MBED_CONF_CANOPENNODE_TRACE   
 }
+static void enqueuePrintStrConst(const char* msg)
+{
+    printfQueue->call(printStrConst, msg);
+} 
+#endif // MBED_CONF_CANOPENNODE_TRACE   
+
+//debug/trace macros:
+#if MBED_CONF_CANOPENNODE_TRACE
+#define co_printMsg(...)           enqueuePrintCANMessage(__VA_ARGS__);
+#else
+#define co_printMsg(...)
+#endif
+
+#if MBED_CONF_CANOPENNODE_TRACE
+#define co_printCanFailed(...)     enqueuePrintCANFailed(__VA_ARGS__);
+#else
+#define co_printCanFailed(...)
+#endif
+
+#if MBED_CONF_CANOPENNODE_TRACE
+#define co_printStr(...)           enqueuePrintStrConst(__VA_ARGS__);
+#else
+#define co_printStr(...)
+#endif
 
 
 //****************************************************************************
@@ -201,7 +231,9 @@ CO_ReturnError_t CO_CANmodule_init(
     // Configure CAN module registers 
     CANport = &CANport0;
 
+#if MBED_CONF_CANOPENNODE_TRACE
     printfQueue = mbed_event_queue();    
+#endif
 
     // Configure CAN timing 
     int CANbaudRate = CANbitRate * 1000;
@@ -342,29 +374,28 @@ CO_ReturnError_t CO_CANsend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer){
             CO_errorReport((CO_EM_t*)CANmodule->em, CO_EM_CAN_TX_OVERFLOW, CO_EMC_CAN_OVERRUN, buffer->ident);
         }
         err = CO_ERROR_TX_OVERFLOW;
-        printfQueue->call(printCANFailed, "bufferFull overflow", buffer->ident);
-        //printf("TX: failed, bufferFull overflow [OD-ID=%lu]\r\n", buffer->ident);
+        co_printCanFailed("bufferFull overflow", buffer->ident);
     }
 
     CO_LOCK_CAN_SEND();
     // if CAN TX buffer is free of given OD, copy message to it
     int success = -1;
     if (CANmodule->CANtxCount == 0) {
-        //printfQueue->call(printStrConst, "CO_CANsend: tryTX");
+        //co_printStr("CO_CANsend: tryTX");
         CANMessage msg = toCANMessage(buffer);
         success = CANport->write(msg);
         if (success == 1) {
             CANmodule->bufferInhibitFlag = buffer->syncFlag;
-            printfQueue->call(printCANMessage, msg, TX);
+            co_printMsg(msg, TX);
         } else {
             buffer->bufferFull = true;
             CANmodule->CANtxCount++;
-            printfQueue->call(printCANFailed, "canFull", buffer->ident);
+            co_printCanFailed("canFull", buffer->ident);
         }
     } else {
         buffer->bufferFull = true;
         CANmodule->CANtxCount++;
-        printfQueue->call(printCANFailed, "bufferFull", buffer->ident);
+        co_printCanFailed("bufferFull", buffer->ident);
     }
     CO_UNLOCK_CAN_SEND();
 
@@ -521,14 +552,14 @@ void CO_CANinterrupt_RX(CO_CANmodule_t *CANmodule){
 
     // Clear interrupt flag here
     // note: the interrupt flag is cleaned by CANport.read() function call 
-    printfQueue->call(printCANMessage, msg, RX);
+    co_printMsg(msg, RX);
 }
 
 
 void CO_CANinterrupt_TX(CO_CANmodule_t *CANmodule){
     // Clear interrupt flag here
     // note: interrupt flag is clear by mbed-os HAL
-    //printfQueue->call(printStrConst, "*");
+    //co_printStr("*");
 
     // First CAN message (bootup) was sent successfully 
     CANmodule->firstCANtxMessage = false;
@@ -540,7 +571,7 @@ void CO_CANinterrupt_TX(CO_CANmodule_t *CANmodule){
         CO_CANtx_t *buffer = &CANmodule->txArray[0];  // first buffer 
         // search through whole array of pointers to transmit message buffers. 
         for(i = CANmodule->txSize; i > 0; i--){
-            //printfQueue->call(printStrConst, "#");
+            //co_printStr("#");
             // if message buffer is full, send it. 
             if(buffer->bufferFull){
                 buffer->bufferFull = false;
@@ -552,7 +583,7 @@ void CO_CANinterrupt_TX(CO_CANmodule_t *CANmodule){
                 CANMessage msg = toCANMessage(buffer);
                 int success = CANport->write_Nonblocking(msg);
                 if (success == 1) { 
-                    printfQueue->call(printCANMessage, msg, TX);
+                    co_printMsg(msg, TX);
                 }
                 break;                      // exit for loop 
             }
