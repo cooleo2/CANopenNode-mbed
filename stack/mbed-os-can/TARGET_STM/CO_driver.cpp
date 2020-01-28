@@ -221,6 +221,8 @@ CO_ReturnError_t CO_CANmodule_init(
 
     for(i=0U; i<rxSize; i++){
         rxArray[i].ident = 0U;
+        rxArray[i].mask = (uint16_t) 0xFFFFFFFF;
+        rxArray[i].object = NULL;
         rxArray[i].pFunct = NULL;
     }
     for(i=0U; i<txSize; i++){
@@ -383,7 +385,10 @@ CO_ReturnError_t CO_CANsend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer){
     if (CANmodule->CANtxCount == 0) {
         //co_printStr("CO_CANsend: tryTX");
         CANMessage msg = toCANMessage(buffer);
-        success = CANport->write(msg);
+        if (core_util_is_isr_active())
+            success = CANport->write_Nonblocking(msg);
+        else
+            success = CANport->write(msg);
         if (success == 1) {
             CANmodule->bufferInhibitFlag = buffer->syncFlag;
             co_printMsg(msg, TX);
@@ -536,7 +541,7 @@ void CO_CANinterrupt_RX(CO_CANmodule_t *CANmodule){
         // CAN module filters are not used, message with any standard 11-bit identifier 
         // has been received. Search rxArray form CANmodule for the same CAN-ID. 
         buffer = &CANmodule->rxArray[0];
-        for(index = CANmodule->rxSize; index > 0U; index--){
+        for(index = 0; index < CANmodule->rxSize; index++){
             if(((rcvMsgIdent ^ buffer->ident) & buffer->mask) == 0U){
                 msgMatched = true;
                 break;
