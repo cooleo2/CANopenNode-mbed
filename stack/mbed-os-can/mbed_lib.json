@@ -1,6 +1,7 @@
 {
     "name": "canopennode",
     "config": {
+        "USE_CO_IND_DIGOUT": true,
         "CAN_RD": "NC",
         "CAN_TD": "NC",
         "RUN_LED": "NC",
