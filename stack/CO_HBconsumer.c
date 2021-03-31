@@ -4,43 +4,23 @@
  * @file        CO_HBconsumer.c
  * @ingroup     CO_HBconsumer
  * @author      Janez Paternoster
- * @copyright   2004 - 2013 Janez Paternoster
+ * @copyright   2004 - 2020 Janez Paternoster
  *
  * This file is part of CANopenNode, an opensource CANopen Stack.
  * Project home page is <https://github.com/CANopenNode/CANopenNode>.
  * For more information on CANopen see <http://www.can-cia.org/>.
  *
- * CANopenNode is free and open source software: you can redistribute
- * it and/or modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 2 of the
- * License, or (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * Following clarification and special exception to the GNU General Public
- * License is included to the distribution terms of CANopenNode:
- *
- * Linking this library statically or dynamically with other modules is
- * making a combined work based on this library. Thus, the terms and
- * conditions of the GNU General Public License cover the whole combination.
- *
- * As a special exception, the copyright holders of this library give
- * you permission to link this library with independent modules to
- * produce an executable, regardless of the license terms of these
- * independent modules, and to copy and distribute the resulting
- * executable under terms of your choice, provided that you also meet,
- * for each linked independent module, the terms and conditions of the
- * license of that module. An independent module is a module which is
- * not derived from or based on this library. If you modify this
- * library, you may extend this exception to your version of the
- * library, but you are not obliged to do so. If you do not wish
- * to do so, delete this exception statement from your version.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "CANopen.h"
@@ -231,7 +211,7 @@ void CO_HBconsumer_initCallbackHeartbeatStarted(
 {
     CO_HBconsNode_t *monitoredNode;
 
-    if (HBcons==NULL || idx>HBcons->numberOfMonitoredNodes) {
+    if (HBcons==NULL || idx>=HBcons->numberOfMonitoredNodes) {
         return;
     }
 
@@ -250,7 +230,7 @@ void CO_HBconsumer_initCallbackTimeout(
 {
     CO_HBconsNode_t *monitoredNode;
 
-    if (HBcons==NULL || idx>HBcons->numberOfMonitoredNodes) {
+    if (HBcons==NULL || idx>=HBcons->numberOfMonitoredNodes) {
         return;
     }
 
@@ -269,7 +249,7 @@ void CO_HBconsumer_initCallbackRemoteReset(
 {
     CO_HBconsNode_t *monitoredNode;
 
-    if (HBcons==NULL || idx>HBcons->numberOfMonitoredNodes) {
+    if (HBcons==NULL || idx>=HBcons->numberOfMonitoredNodes) {
         return;
     }
 
@@ -295,6 +275,7 @@ void CO_HBconsumer_process(
 
     if(NMTisPreOrOperational){
         for(i=0; i<HBcons->numberOfMonitoredNodes; i++){
+            uint16_t timeDifference_ms_copy = timeDifference_ms;
             if(monitoredNode->time > 0){/* is node monitored */
                 /* Verify if received message is heartbeat or bootup */
                 if(IS_CANrxNew(monitoredNode->CANrxNew)){
@@ -314,14 +295,14 @@ void CO_HBconsumer_process(
                         }
                         monitoredNode->HBstate = CO_HBconsumer_ACTIVE;
                         monitoredNode->timeoutTimer = 0;  /* reset timer */
-                        timeDifference_ms = 0;
+                        timeDifference_ms_copy = 0;
                     }
                     CLEAR_CANrxNew(monitoredNode->CANrxNew);
                 }
 
                 /* Verify timeout */
                 if(monitoredNode->timeoutTimer < monitoredNode->time) {
-                    monitoredNode->timeoutTimer += timeDifference_ms;
+                    monitoredNode->timeoutTimer += timeDifference_ms_copy;
                 }
                 if(monitoredNode->HBstate!=CO_HBconsumer_UNCONFIGURED &&
                    monitoredNode->HBstate!=CO_HBconsumer_UNKNOWN) {
@@ -409,7 +390,7 @@ CO_HBconsumer_state_t CO_HBconsumer_getState(
 {
     CO_HBconsNode_t *monitoredNode;
 
-    if (HBcons==NULL || idx>HBcons->numberOfMonitoredNodes) {
+    if (HBcons==NULL || idx>=HBcons->numberOfMonitoredNodes) {
         return CO_HBconsumer_UNCONFIGURED;
     }
 
@@ -425,7 +406,7 @@ int8_t CO_HBconsumer_getNmtState(
 {
     CO_HBconsNode_t *monitoredNode;
 
-    if (HBcons==NULL || nmtState==NULL || idx>HBcons->numberOfMonitoredNodes) {
+    if (HBcons==NULL || nmtState==NULL || idx>=HBcons->numberOfMonitoredNodes) {
         return -1;
     }
     *nmtState = CO_NMT_INITIALIZING;

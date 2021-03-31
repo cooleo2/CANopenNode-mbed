@@ -3,24 +3,23 @@
  *
  * @file        CO_driver.c
  * @author      Janez Paternoster
- * @copyright   2015 Janez Paternoster
+ * @copyright   2015 - 2020 Janez Paternoster
  *
  * This file is part of CANopenNode, an opensource CANopen Stack.
  * Project home page is <https://github.com/CANopenNode/CANopenNode>.
  * For more information on CANopen see <http://www.can-cia.org/>.
  *
- * CANopenNode is free and open source software: you can redistribute
- * it and/or modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 2 of the
- * License, or (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 
@@ -99,7 +98,7 @@ static CO_ReturnError_t setFilters(CO_CANmodule_t *CANmodule){
 
 
 /******************************************************************************/
-void CO_CANsetConfigurationMode(int32_t CANbaseAddress){
+void CO_CANsetConfigurationMode(void *CANdriverState){
 }
 
 
@@ -116,7 +115,7 @@ void CO_CANsetNormalMode(CO_CANmodule_t *CANmodule){
 /******************************************************************************/
 CO_ReturnError_t CO_CANmodule_init(
         CO_CANmodule_t         *CANmodule,
-        int32_t                 CANbaseAddress,
+        void                   *CANdriverState,
         CO_CANrx_t              rxArray[],
         uint16_t                rxSize,
         CO_CANtx_t              txArray[],
@@ -127,13 +126,13 @@ CO_ReturnError_t CO_CANmodule_init(
     uint16_t i;
 
     /* verify arguments */
-    if(CANmodule==NULL || CANbaseAddress==0 || rxArray==NULL || txArray==NULL){
+    if(CANmodule==NULL || CANdriverState==NULL || rxArray==NULL || txArray==NULL){
         ret = CO_ERROR_ILLEGAL_ARGUMENT;
     }
 
     /* Configure object variables */
     if(ret == CO_ERROR_NO){
-        CANmodule->CANbaseAddress = CANbaseAddress;
+        CANmodule->CANdriverState = CANdriverState;
         CANmodule->rxArray = rxArray;
         CANmodule->rxSize = rxSize;
         CANmodule->txArray = txArray;
@@ -173,8 +172,9 @@ CO_ReturnError_t CO_CANmodule_init(
         if(CANmodule->fd < 0){
             ret = CO_ERROR_ILLEGAL_ARGUMENT;
         }else{
+            const int * const ifindex_ptr = CANdriverState;
             sockAddr.can_family = AF_CAN;
-            sockAddr.can_ifindex = CANbaseAddress;
+            sockAddr.can_ifindex = *ifindex_ptr;
             if(bind(CANmodule->fd, (struct sockaddr*)&sockAddr, sizeof(sockAddr)) != 0){
                 ret = CO_ERROR_ILLEGAL_ARGUMENT;
             }
@@ -335,7 +335,7 @@ void CO_CANverifyErrors(CO_CANmodule_t *CANmodule){
     CO_EM_t* em = (CO_EM_t*)CANmodule->em;
     uint32_t err;
 
-    canGetErrorCounters(CANmodule->CANbaseAddress, &rxErrors, &txErrors);
+    canGetErrorCounters(CANmodule->CANdriverState, &rxErrors, &txErrors);
     if(txErrors > 0xFFFF) txErrors = 0xFFFF;
     if(rxErrors > 0xFF) rxErrors = 0xFF;
 

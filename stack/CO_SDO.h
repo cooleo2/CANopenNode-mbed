@@ -4,43 +4,23 @@
  * @file        CO_SDO.h
  * @ingroup     CO_SDO
  * @author      Janez Paternoster
- * @copyright   2004 - 2013 Janez Paternoster
+ * @copyright   2004 - 2020 Janez Paternoster
  *
  * This file is part of CANopenNode, an opensource CANopen Stack.
  * Project home page is <https://github.com/CANopenNode/CANopenNode>.
  * For more information on CANopen see <http://www.can-cia.org/>.
  *
- * CANopenNode is free and open source software: you can redistribute
- * it and/or modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 2 of the
- * License, or (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * Following clarification and special exception to the GNU General Public
- * License is included to the distribution terms of CANopenNode:
- *
- * Linking this library statically or dynamically with other modules is
- * making a combined work based on this library. Thus, the terms and
- * conditions of the GNU General Public License cover the whole combination.
- *
- * As a special exception, the copyright holders of this library give
- * you permission to link this library with independent modules to
- * produce an executable, regardless of the license terms of these
- * independent modules, and to copy and distribute the resulting
- * executable under terms of your choice, provided that you also meet,
- * for each linked independent module, the terms and conditions of the
- * license of that module. An independent module is a module which is
- * not derived from or based on this library. If you modify this
- * library, you may extend this exception to your version of the
- * library, but you are not obliged to do so. If you do not wish
- * to do so, delete this exception statement from your version.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 
@@ -259,20 +239,20 @@ typedef enum{
  *
  *
  * Function CO_SDO_init() initializes object CO_SDO_t, which includes SDO
- * server and Object dictionary. 
+ * server and Object dictionary.
  *
  * Application doesn't need to know anything about the Object dictionary. It can
  * use variables specified in CO_OD.h file directly. If it needs more control
  * over the CANopen communication with the variables, it can configure additional
  * functionality with function CO_OD_configure(). Additional functionality
  * include: @ref CO_SDO_OD_function and #CO_SDO_OD_flags_t.
- * 
- * Interface to Object dictionary is provided by following functions: CO_OD_find() 
- * finds OD entry by index, CO_OD_getLength() returns length of variable, 
- * CO_OD_getAttribute returns attribute and CO_OD_getDataPointer() returns pointer 
- * to data. These functions are used by SDO server and by PDO configuration. They 
+ *
+ * Interface to Object dictionary is provided by following functions: CO_OD_find()
+ * finds OD entry by index, CO_OD_getLength() returns length of variable,
+ * CO_OD_getAttribute returns attribute and CO_OD_getDataPointer() returns pointer
+ * to data. These functions are used by SDO server and by PDO configuration. They
  * can also be used to access the OD by index like this.
- * 
+ *
  * \code{.c}
  * index = CO_OD_find(CO->SDO[0], OD_H1001_ERR_REG);
  * if (index == 0xffff) {
@@ -291,10 +271,10 @@ typedef enum{
  * *p = new_data;
  * CO_UNLOCK_OD();
  * \endcode
- * 
- * Be aware that accessing the OD directly using CO_OD.h files is more CPU 
+ *
+ * Be aware that accessing the OD directly using CO_OD.h files is more CPU
  * efficient as CO_OD_find() has to do a search everytime it is called.
- * 
+ *
  */
 
 
@@ -358,6 +338,18 @@ typedef enum{
         #define CO_SDO_BUFFER_SIZE    32
     #endif
 
+/**
+ * Size of fifo queue for SDO received messages.
+ *
+ * If block transfers are used size of fifo queue should be more that 1 message
+ * to avoid possible drops in consecutive SDO block upload transfers.
+ * To increase performance, value can be set to 1 if block transfers are not used
+ *
+ * Min value is 1.
+ */
+    #ifndef CO_SDO_RX_DATA_SIZE
+        #define CO_SDO_RX_DATA_SIZE   2
+    #endif
 
 /**
  * Object Dictionary attributes. Bit masks for attribute in CO_OD_entry_t.
@@ -472,19 +464,20 @@ typedef enum{
  * Internal states of the SDO server state machine
  */
 typedef enum {
-    CO_SDO_ST_IDLE                  = 0x00U,
-    CO_SDO_ST_DOWNLOAD_INITIATE     = 0x11U,
-    CO_SDO_ST_DOWNLOAD_SEGMENTED    = 0x12U,
-    CO_SDO_ST_DOWNLOAD_BL_INITIATE  = 0x14U,
-    CO_SDO_ST_DOWNLOAD_BL_SUBBLOCK  = 0x15U,
-    CO_SDO_ST_DOWNLOAD_BL_SUB_RESP  = 0x16U,
-    CO_SDO_ST_DOWNLOAD_BL_END       = 0x17U,
-    CO_SDO_ST_UPLOAD_INITIATE       = 0x21U,
-    CO_SDO_ST_UPLOAD_SEGMENTED      = 0x22U,
-    CO_SDO_ST_UPLOAD_BL_INITIATE    = 0x24U,
-    CO_SDO_ST_UPLOAD_BL_INITIATE_2  = 0x25U,
-    CO_SDO_ST_UPLOAD_BL_SUBBLOCK    = 0x26U,
-    CO_SDO_ST_UPLOAD_BL_END         = 0x27U
+    CO_SDO_ST_IDLE                   = 0x00U,
+    CO_SDO_ST_DOWNLOAD_INITIATE      = 0x11U,
+    CO_SDO_ST_DOWNLOAD_SEGMENTED     = 0x12U,
+    CO_SDO_ST_DOWNLOAD_BL_INITIATE   = 0x14U,
+    CO_SDO_ST_DOWNLOAD_BL_SUBBLOCK   = 0x15U,
+    CO_SDO_ST_DOWNLOAD_BL_SUB_RESP   = 0x16U,
+    CO_SDO_ST_DOWNLOAD_BL_SUB_RESP_2 = 0x17U,
+    CO_SDO_ST_DOWNLOAD_BL_END        = 0x18U,
+    CO_SDO_ST_UPLOAD_INITIATE        = 0x21U,
+    CO_SDO_ST_UPLOAD_SEGMENTED       = 0x22U,
+    CO_SDO_ST_UPLOAD_BL_INITIATE     = 0x24U,
+    CO_SDO_ST_UPLOAD_BL_INITIATE_2   = 0x25U,
+    CO_SDO_ST_UPLOAD_BL_SUBBLOCK     = 0x26U,
+    CO_SDO_ST_UPLOAD_BL_END          = 0x27U
 } CO_SDO_state_t;
 
 
@@ -607,8 +600,8 @@ typedef struct{
  * SDO server object.
  */
 typedef struct{
-    /** 8 data bytes of the received message. */
-    uint8_t             CANrxData[8];
+    /** FIFO queue of the received message 8 data bytes each */
+    uint8_t             CANrxData[CO_SDO_RX_DATA_SIZE][8];
     /** SDO data buffer of size #CO_SDO_BUFFER_SIZE. */
     uint8_t             databuffer[CO_SDO_BUFFER_SIZE];
     /** Internal flag indicates, that this object has own OD */
@@ -643,10 +636,18 @@ typedef struct{
     uint16_t            crc;
     /** Length of data in the last segment in block upload */
     uint8_t             lastLen;
+    /** Indication timeout in sub-block transfer */
+    bool_t              timeoutSubblockDownolad;
     /** Indication end of block transfer */
     bool_t              endOfTransfer;
-    /** Variable indicates, if new SDO message received from CAN bus */
-    volatile void      *CANrxNew;
+    /** Variables indicates, if new SDO message received from CAN bus */
+    volatile void      *CANrxNew[CO_SDO_RX_DATA_SIZE];
+    /** Index of CANrxData for new received SDO message */
+    uint8_t             CANrxRcv;
+    /** Index of CANrxData SDO message to processed */
+    uint8_t             CANrxProc;
+    /** Number of new SDO messages in CANrxData to process */
+    uint8_t             CANrxSize;
     /** From CO_SDO_initCallback() or NULL */
     void              (*pFunctSignal)(void);
     /** From CO_SDO_init() */

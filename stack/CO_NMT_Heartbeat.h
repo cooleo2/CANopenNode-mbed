@@ -4,43 +4,23 @@
  * @file        CO_NMT_Heartbeat.h
  * @ingroup     CO_NMT_Heartbeat
  * @author      Janez Paternoster
- * @copyright   2004 - 2013 Janez Paternoster
+ * @copyright   2004 - 2020 Janez Paternoster
  *
  * This file is part of CANopenNode, an opensource CANopen Stack.
  * Project home page is <https://github.com/CANopenNode/CANopenNode>.
  * For more information on CANopen see <http://www.can-cia.org/>.
  *
- * CANopenNode is free and open source software: you can redistribute
- * it and/or modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 2 of the
- * License, or (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * Following clarification and special exception to the GNU General Public
- * License is included to the distribution terms of CANopenNode:
- *
- * Linking this library statically or dynamically with other modules is
- * making a combined work based on this library. Thus, the terms and
- * conditions of the GNU General Public License cover the whole combination.
- *
- * As a special exception, the copyright holders of this library give
- * you permission to link this library with independent modules to
- * produce an executable, regardless of the license terms of these
- * independent modules, and to copy and distribute the resulting
- * executable under terms of your choice, provided that you also meet,
- * for each linked independent module, the terms and conditions of the
- * license of that module. An independent module is a module which is
- * not derived from or based on this library. If you modify this
- * library, you may extend this exception to your version of the
- * library, but you are not obliged to do so. If you do not wish
- * to do so, delete this exception statement from your version.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 
@@ -57,7 +37,7 @@ extern "C" {
  * @{
  *
  * CANopen Network management and Heartbeat producer protocol.
- * 
+ *
  * CANopen device can be in one of the #CO_NMT_internalState_t
  *  - Initializing. It is active before CANopen is initialized.
  *  - Pre-operational. All CANopen objects are active, except PDOs.
@@ -66,9 +46,9 @@ extern "C" {
  *
  * NMT master can change the internal state of the devices by sending
  * #CO_NMT_command_t.
- * 
+ *
  * ###NMT message contents:
- *   
+ *
  *   Byte | Description
  *   -----|-----------------------------------------------------------
  *     0  | #CO_NMT_command_t
@@ -150,6 +130,7 @@ typedef enum{
  */
 typedef struct{
     uint8_t             operatingState; /**< See @ref CO_NMT_internalState_t */
+#ifdef CO_USE_LEDS
     int8_t              LEDflickering;  /**< See @ref CO_NMT_statusLEDdiodes */
     int8_t              LEDblinking;    /**< See @ref CO_NMT_statusLEDdiodes */
     int8_t              LEDsingleFlash; /**< See @ref CO_NMT_statusLEDdiodes */
@@ -158,6 +139,7 @@ typedef struct{
     int8_t              LEDquadrupleFlash; /**< See @ref CO_NMT_statusLEDdiodes */
     int8_t              LEDgreenRun;    /**< See @ref CO_NMT_statusLEDdiodes */
     int8_t              LEDredError;    /**< See @ref CO_NMT_statusLEDdiodes */
+#endif /* CO_USE_LEDS */
 
     uint8_t             resetCommand;   /**< If different than zero, device will reset */
     uint8_t             nodeId;         /**< CANopen Node ID of this device */
@@ -228,7 +210,9 @@ void CO_NMT_initCallback(
  *
  * @param NMT NMT object.
  */
+#ifdef CO_USE_LEDS
 void CO_NMT_blinkingProcess50ms(CO_NMT_t *NMT);
+#endif /* CO_USE_LEDS */
 
 
 /**
@@ -267,6 +251,17 @@ CO_NMT_reset_cmd_t CO_NMT_process(
  */
 CO_NMT_internalState_t CO_NMT_getInternalState(
         CO_NMT_t               *NMT);
+
+/**
+ * Set current NMT state
+ *
+ * @param NMT This object.
+ * @param CO_NMT_internalState_t State to set
+ *
+ */
+void CO_NMT_setInternalState(
+        CO_NMT_t               *NMT,
+        CO_NMT_internalState_t state);
 
 
 #ifdef __cplusplus
