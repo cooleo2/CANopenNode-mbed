@@ -7,6 +7,7 @@ class CANbus : public mbed::CAN {
 
 public:
     CANbus(PinName rd, PinName td);
+    CANbus(PinName rd, PinName td, int hz);
 
     void clearSendingMessages();
     bool rxOverrunFlagSet();

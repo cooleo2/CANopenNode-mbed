@@ -22,6 +22,10 @@ CANbus::CANbus(PinName rd, PinName td) :
 {
 }
 
+CANbus::CANbus(PinName rd, PinName td, int hz) :
+    mbed::CAN(rd, td, hz)
+{
+}
 
 void CANbus::clearSendingMessages()
 {

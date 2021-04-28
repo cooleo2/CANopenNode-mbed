@@ -52,7 +52,7 @@ extern "C" {
 #include "CO_Emergency.h"
 }
 
-static CANbus CANport0(MBED_CONF_CANOPENNODE_CAN_RD, MBED_CONF_CANOPENNODE_CAN_TD); //local cpp variable
+
 CANbus *CANport = NULL; //external pointer to CANPort0
 CO_CANmodule_t* _CANmodule = NULL;
 
@@ -183,6 +183,14 @@ void CO_CANsetConfigurationMode(void *CANdriverState){
 void CO_CANsetNormalMode(CO_CANmodule_t *CANmodule){
     // Put CAN module in normal mode 
     CANmodule->CANnormal = true;
+
+    /*
+    The bxCAN enters Normal mode and is ready to take part in bus activities when it
+    has synchronized with the data transfer on the CAN bus. This is done by waiting for the
+    occurrence of a sequence of 11 consecutive recessive bits (Bus Idle state). The switch to
+    Normal mode is confirmed by the hardware by clearing the INAK bit in the CAN_MSR
+    register.
+    */
 }
 
 
@@ -230,19 +238,33 @@ CO_ReturnError_t CO_CANmodule_init(
     }
 
 
-    // Configure CAN module registers 
+    /* 
+       Create static CAN interface only at this point.
+       We do this for 2 reasons:
+       
+       1) Although the BSS won't list the CANbus object after compile,
+       at least this enables us to step into the code which is 
+       harder when using a globally instanciated CANbus object.
+
+       2) Furthermore on STM boards it's also important to call the
+       `mbed::CAN(PinName rd, PinName td, int hz)` constructor, the
+       one that sets the correct baudrate from the beginning.
+       Both mbed::CAN ctor's call can_init (from can_api.c), which on
+       its turn initializes the CAN module with a given frequency. 
+       Depending on which ctor you use, it will initialize the CAN 
+       interface with a default or user set frequency. The default 
+       frequency may cause issues when the CAN device is already 
+       active with a different bus frequency, for example after 
+       a reset event occured. More info can be found here:
+       https://github.com/ARMmbed/mbed-os/issues/3863
+    */
+    int CANbaudRate = CANbitRate * 1000;
+    static CANbus CANport0(MBED_CONF_CANOPENNODE_CAN_RD, MBED_CONF_CANOPENNODE_CAN_TD, CANbaudRate); //local cpp variable
     CANport = &CANport0;
 
 #if MBED_CONF_CANOPENNODE_TRACE
     printfQueue = mbed_event_queue();    
 #endif
-
-    // Configure CAN timing 
-    int CANbaudRate = CANbitRate * 1000;
-    freq_err = CANport->frequency(CANbaudRate);
-    if(freq_err != 1) {
-        return CO_ERROR_PARAMETERS;
-    }
 
     CANport->mode(CAN::Normal); // CAN::LocalTest | CAN::Normal | CAN::Silent
 
