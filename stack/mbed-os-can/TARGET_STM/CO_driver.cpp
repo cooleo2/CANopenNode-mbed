@@ -204,9 +204,6 @@ CO_ReturnError_t CO_CANmodule_init(
         uint16_t                txSize,
         uint16_t                CANbitRate)
 {
-    uint16_t i;
-    uint16_t freq_err = 0;
-
     // verify arguments 
     if(CANmodule==NULL || rxArray==NULL || txArray==NULL){
         return CO_ERROR_ILLEGAL_ARGUMENT;
@@ -227,13 +224,13 @@ CO_ReturnError_t CO_CANmodule_init(
     CANmodule->em = NULL;
     _CANmodule = CANmodule;
 
-    for(i=0U; i<rxSize; i++){
+    for(uint16_t i=0U; i<rxSize; i++){
         rxArray[i].ident = 0U;
         rxArray[i].mask = (uint16_t) 0xFFFFFFFF;
         rxArray[i].object = NULL;
         rxArray[i].pFunct = NULL;
     }
-    for(i=0U; i<txSize; i++){
+    for(uint16_t i=0U; i<txSize; i++){
         txArray[i].bufferFull = false;
     }
 
