@@ -519,7 +519,9 @@ CO_LSSmaster_return_t CO_LSSmaster_configureStore(
     }
 
     /* Initiate config store */
-    if (LSSmaster->state==CO_LSSmaster_STATE_CFG_SLECTIVE &&
+    if ((LSSmaster->state==CO_LSSmaster_STATE_CFG_SLECTIVE ||
+        /* Let store node ID also be run in global mode for unconfiguring all nodes */
+        LSSmaster->state==CO_LSSmaster_STATE_CFG_GLOBAL) &&
         LSSmaster->command==CO_LSSmaster_COMMAND_WAITING){
 
         LSSmaster->command = CO_LSSmaster_COMMAND_CFG_STORE;
