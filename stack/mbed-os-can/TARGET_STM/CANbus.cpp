@@ -1,8 +1,6 @@
 #include "CANbus.h"
-#if defined(TARGET_STM32F0)
-#include "stm32f0xx_hal_can.h"
-#elif defined(TARGET_STM32L4)
-#include "stm32l4xx_hal_can_legacy.h" //note: use legacy HAL for this chip-family in mbed-os
+#if defined(TARGET_STM32G4)
+#include "stm32g4xx_hal_can.h"
 /**
  * From DS11585
  * ------------
@@ -30,19 +28,17 @@ CANbus::CANbus(PinName rd, PinName td, int hz) :
 void CANbus::clearSendingMessages()
 {
     lock();
-    if(!(__HAL_CAN_TRANSMIT_STATUS(&_can.CanHandle, CAN_TXMAILBOX_0)))
-        __HAL_CAN_CANCEL_TRANSMIT(&_can.CanHandle, CAN_TXMAILBOX_0);
-    if(!(__HAL_CAN_TRANSMIT_STATUS(&_can.CanHandle, CAN_TXMAILBOX_1)))
-        __HAL_CAN_CANCEL_TRANSMIT(&_can.CanHandle, CAN_TXMAILBOX_1);
-    if(!(__HAL_CAN_TRANSMIT_STATUS(&_can.CanHandle, CAN_TXMAILBOX_2)))
-        __HAL_CAN_CANCEL_TRANSMIT(&_can.CanHandle, CAN_TXMAILBOX_2);
+    // Clear the CAN TX Buffers
+    for (uint32_t i = FDCAN_TX_BUFFER0; i <= FDCAN_TX_BUFFER2 && i != 0; i = i << 1) {
+        HAL_FDCAN_AbortTxRequest(&_can.CanHandle, i);
+    }
     unlock();
 }
 
 bool CANbus::rxOverrunFlagSet()
 {
-    bool fifo0 = (bool) __HAL_CAN_GET_FLAG(&_can.CanHandle, CAN_FLAG_FOV0);
-    bool fifo1 = (bool) __HAL_CAN_GET_FLAG(&_can.CanHandle, CAN_FLAG_FOV1);
+    bool fifo0 = (bool) __HAL_FDCAN_GET_FLAG(&_can.CanHandle, FDCAN_FLAG_RX_FIFO0_FULL);
+    bool fifo1 = (bool) __HAL_FDCAN_GET_FLAG(&_can.CanHandle, FDCAN_FLAG_RX_FIFO1_FULL);
     return (fifo0 || fifo1 ? true : false);
 }
 
