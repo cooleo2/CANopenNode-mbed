@@ -1137,7 +1137,7 @@ int8_t CO_SDO_process(
             if((SDO->ODF_arg.ODdataStorage == 0) && (SDO->bufferOffset != 0) && !lastSegmentInSubblock){
                 /* calculate CRC on next bytes, if enabled */
                 if(SDO->crcEnabled){
-                    SDO->crc = crc16_ccitt(SDO->ODF_arg.data, SDO->bufferOffset, SDO->crc);
+                    SDO->crc = crc16_ccitt_CO(SDO->ODF_arg.data, SDO->bufferOffset, SDO->crc);
                 }
 
                 /* write data to the Object dictionary */
@@ -1189,7 +1189,7 @@ int8_t CO_SDO_process(
             /* calculate and verify CRC, if enabled */
             if(SDO->crcEnabled){
                 uint16_t crc;
-                SDO->crc = crc16_ccitt(SDO->ODF_arg.data, SDO->bufferOffset, SDO->crc);
+                SDO->crc = crc16_ccitt_CO(SDO->ODF_arg.data, SDO->bufferOffset, SDO->crc);
 
                 CO_memcpySwap2(&crc, &CANrxData[1]);
 
@@ -1327,7 +1327,7 @@ int8_t CO_SDO_process(
             /* calculate CRC, if enabled */
             if((CANrxData[0] & 0x04U) != 0U){
                 SDO->crcEnabled = true;
-                SDO->crc = crc16_ccitt(SDO->ODF_arg.data, SDO->ODF_arg.dataLength, 0);
+                SDO->crc = crc16_ccitt_CO(SDO->ODF_arg.data, SDO->ODF_arg.dataLength, 0);
             }
             else{
                 SDO->crcEnabled = false;
@@ -1445,7 +1445,7 @@ int8_t CO_SDO_process(
 
                     /* calculate CRC on next bytes, if enabled */
                     if(SDO->crcEnabled){
-                        SDO->crc = crc16_ccitt(SDO->ODF_arg.data, SDO->ODF_arg.dataLength, SDO->crc);
+                        SDO->crc = crc16_ccitt_CO(SDO->ODF_arg.data, SDO->ODF_arg.dataLength, SDO->crc);
                     }
 
                   /* return to the original data buffer */

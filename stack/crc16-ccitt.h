@@ -58,7 +58,7 @@ extern "C" {
 #ifdef CO_USE_OWN_CRC16
 extern
 #endif
-unsigned short crc16_ccitt(
+unsigned short crc16_ccitt_CO(
         const unsigned char     block[],
         unsigned int            blockLength,
         unsigned short          crc);

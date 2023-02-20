@@ -82,7 +82,7 @@ static const unsigned short crc16_ccitt_table[256] = {
 
 
 /******************************************************************************/
-unsigned short crc16_ccitt(
+unsigned short crc16_ccitt_CO(
         const unsigned char     block[],
         unsigned int            blockLength,
         unsigned short          crc)

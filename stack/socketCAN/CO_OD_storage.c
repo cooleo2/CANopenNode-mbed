@@ -130,7 +130,7 @@ int CO_OD_storage_saveSecure(
 
             CO_LOCK_OD();
             fwrite((const void *)odAddress, 1, odSize, fp);
-            CRC = crc16_ccitt((unsigned char*)odAddress, odSize, 0);
+            CRC = crc16_ccitt_CO((unsigned char*)odAddress, odSize, 0);
             CO_UNLOCK_OD();
 
             fwrite((const void *)&CRC, 1, 2, fp);
@@ -152,7 +152,7 @@ int CO_OD_storage_saveSecure(
             fp = fopen(filename, "r");
             if(fp != NULL) {
                 cnt = fread(buf, 1, odSize, fp);
-                CRC2 = crc16_ccitt((unsigned char*)buf, odSize, 0);
+                CRC2 = crc16_ccitt_CO((unsigned char*)buf, odSize, 0);
                 /* read also two bytes of CRC */
                 cnt += fread(buf, 1, 4, fp);
                 fclose(fp);
@@ -261,7 +261,7 @@ CO_ReturnError_t CO_OD_storage_init(
             cnt = fread(buf, 1, odStor->odSize, fp);
             /* read also two bytes of CRC from file */
             cnt += fread(&CRC[0], 1, 4, fp);
-            CRC[1] = crc16_ccitt((unsigned char*)buf, odStor->odSize, 0);
+            CRC[1] = crc16_ccitt_CO((unsigned char*)buf, odStor->odSize, 0);
             fclose(fp);
         }
 
@@ -355,7 +355,7 @@ CO_ReturnError_t CO_OD_storage_autoSave(
             fwrite((const void *)buf, 1, odStor->odSize, odStor->fp);
 
             /* write also CRC */
-            CRC = crc16_ccitt((unsigned char*)buf, odStor->odSize, 0);
+            CRC = crc16_ccitt_CO((unsigned char*)buf, odStor->odSize, 0);
             fwrite((const void *)&CRC, 1, 2, odStor->fp);
 
             fflush(odStor->fp);

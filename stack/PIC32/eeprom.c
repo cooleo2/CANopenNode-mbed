@@ -77,7 +77,7 @@ static CO_SDO_abortCode_t CO_ODF_1010(CO_ODF_arg_t *ODF_arg){
                     ee->OD_EEPROMWriteEnable = true;
 
                 /* prepare MBR */
-                MBR.CRC = crc16_ccitt(ee->OD_ROMAddress, ee->OD_ROMSize, 0);
+                MBR.CRC = crc16_ccitt_CO(ee->OD_ROMAddress, ee->OD_ROMSize, 0);
                 MBR.OD_EEPROMSize = ee->OD_EEPROMSize;
                 MBR.OD_ROMSize = ee->OD_ROMSize;
 
@@ -226,7 +226,7 @@ CO_ReturnError_t CO_EE_init_1(
     /* read the CO_OD_ROM from EEPROM and verify CRC */
     if(MBR.OD_ROMSize == OD_ROMSize){
         EE_readBlock(OD_ROMAddress, EE_SIZE/2, OD_ROMSize);
-        if(crc16_ccitt(OD_ROMAddress, OD_ROMSize, 0) != MBR.CRC){
+        if(crc16_ccitt_CO(OD_ROMAddress, OD_ROMSize, 0) != MBR.CRC){
             return CO_ERROR_CRC;
         }
     }
