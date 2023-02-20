@@ -1,6 +1,6 @@
 #include "CANbus.h"
 #if defined(TARGET_STM32G4)
-#include "stm32g4xx_hal_can.h"
+#include "stm32g4xx_hal_fdcan.h"
 /**
  * From DS11585
  * ------------
