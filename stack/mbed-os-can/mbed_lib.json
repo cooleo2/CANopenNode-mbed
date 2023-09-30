@@ -22,6 +22,11 @@
             "CAN_TD": "PB_9",
             "RUN_LED": "LED1",
             "ERROR_LED": "LED3"
+        },
+        "NUCLEO_G431RB": {
+            "CAN_RD": "PA_11",
+            "CAN_TD": "PA_12",
+            "RUN_LED": "LED1"
         }
     }
 }
